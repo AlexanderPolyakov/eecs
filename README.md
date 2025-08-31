@@ -15,16 +15,16 @@ cmake --build build
 And then run executables built in `build/` directory.
 
 ## TODOs
--[ ] Shrink SparseSets
--[ ] More examples:
-    -[ ] Deletion of entities
-    -[ ] Deletion of components
-    -[ ] Query from inside another query or system
--[ ] Somehow (tm) figure out how to fix component and lambda arguments duplication?
--[ ] Better description
--[ ] Serialization
--[ ] Script integration (?)
--[ ] Tests!
+- [ ] Shrink SparseSets
+- [ ] More examples:
+    - [ ] Deletion of entities
+    - [ ] Deletion of components
+    - [ ] Query from inside another query or system
+- [ ] Somehow (tm) figure out how to fix component and lambda arguments duplication?
+- [ ] Better description
+- [ ] Serialization
+- [ ] Script integration (?)
+- [ ] Tests!
 
 ## Examples
 Look in the `samples` folder, they're concise, but generally you have to
@@ -81,6 +81,6 @@ eecs::reg_system(reg, [&](eecs::EntityId eid, float& position, float velocity)
 
 ## Projects using eecs
 ### [Scampi](https://apoly.itch.io/scampi)
-Scampi was rewritten to **eecs** (from **flecs**) as a proof of concept that this library works in practice at
-least on a small scale project. Functionaly it uses all current features of **eecs** and essentially was a
+Scampi was rewritten to `eecs` (from `flecs`) as a proof of concept that this library works in practice at
+least on a small scale project. Functionaly it uses all current features of `eecs` and essentially was a
 testing ground for the library.

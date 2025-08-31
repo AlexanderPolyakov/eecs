@@ -81,6 +81,7 @@ eecs::reg_system(reg, [&](eecs::EntityId eid, float& position, float velocity)
 
 ## Projects using eecs
 ### [Scampi](https://apoly.itch.io/scampi)
+![Screenshot of a game scampi, showing a submarine hanging on a barge with an updates screen on the right side and game world on the left side](https://img.itch.zone/aW1hZ2UvMzQ1NzM2MC8yMDYyMzI3Mi5wbmc=/original/h0jhEL.png)
 Scampi was rewritten to `eecs` (from `flecs`) as a proof of concept that this library works in practice at
 least on a small scale project. Functionaly it uses all current features of `eecs` and essentially was a
 testing ground for the library.

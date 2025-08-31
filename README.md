@@ -85,3 +85,7 @@ eecs::reg_system(reg, [&](eecs::EntityId eid, float& position, float velocity)
 Scampi was rewritten to `eecs` (from `flecs`) as a proof of concept that this library works in practice at
 least on a small scale project. Functionaly it uses all current features of `eecs` and essentially was a
 testing ground for the library.
+
+One of the main reasons for the rewrite was to allow named component IDs, so across 24 systems and over 30 queries there is only
+one component which is not considered a simple struct or type like `float` or `Vector2`. This allowed to get rid of a lot of code
+which was just adding burden to the system.

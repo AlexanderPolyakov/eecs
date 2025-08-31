@@ -1,0 +1,323 @@
+template<typename ComponentType>
+inline SparseSetHolder create_sparse_set_holder()
+{
+    return SparseSetHolder(typeid(ComponentType).hash_code(), (SparseSetBase*)new SparseSet<ComponentType>());
+}
+
+template<typename ComponentType>
+void reg_component(Registry& reg, ComponentId<ComponentType> cid)
+{
+    size_t typeHash = typeid(ComponentType).hash_code();
+    // First try to find it
+    auto itf = reg.holders.find(cid.hash);
+    if (itf != reg.holders.end())
+    {
+        // check type
+        assert(itf->second.typeHash == typeHash);
+        return;
+    }
+
+    reg.holders.emplace(cid.hash, create_sparse_set_holder<ComponentType>());
+}
+
+template<typename ComponentType>
+void set_component(Registry& reg, EntityId eid, ComponentId<ComponentType> cid, ComponentType val)
+{
+    size_t typeHash = typeid(ComponentType).hash_code();
+    // First try to find it
+    auto itf = reg.holders.find(cid.hash);
+    if (itf == reg.holders.end())
+    {
+        reg.holders.emplace(cid.hash, create_sparse_set_holder<ComponentType>());
+        itf = reg.holders.find(cid.hash);
+    }
+    if (itf != reg.holders.end())
+    {
+        assert(itf->second.typeHash == typeHash);
+        if (itf->second.typeHash != typeHash)
+            return;
+        SparseSet<ComponentType>& set = *(SparseSet<ComponentType>*)itf->second.set;
+        while (eid >= set.indices.size())
+            set.indices.emplace_back(-1);
+        int idx = set.indices[eid];
+        if (idx < 0)
+        {
+            int i = set.entities.size();
+            set.indices[eid] = i;
+            set.entities.emplace_back(eid);
+            set.data.emplace_back(val);
+            return;
+        }
+        assert(set.entities[idx] == eid);
+        set.data[idx] = val;
+    }
+    else
+    {
+        // TODO: add a error report here, we now have a name for the component!
+    }
+}
+
+template<typename ComponentType>
+inline ComponentType get_comp_or(Registry& reg, EntityId eid, ComponentId<ComponentType> cid, const ComponentType& def)
+{
+    size_t typeHash = typeid(ComponentType).hash_code();
+    // First try to find it
+    auto itf = reg.holders.find(cid.hash);
+    if (itf == reg.holders.end())
+        return def;
+    assert(itf->second.typeHash == typeHash);
+    if (itf->second.typeHash != typeHash)
+        return def;
+    SparseSet<ComponentType>& set = *(SparseSet<ComponentType>*)itf->second.set;
+    if (eid >= set.indices.size())
+        return def;
+    int idx = set.indices[eid];
+    if (idx < 0 || set.entities[idx] != eid)
+        return def;
+    return set.data[idx];
+}
+
+template<typename ComponentType, typename Callable>
+inline void query_component(Registry& reg, EntityId eid, Callable foo, ComponentId<ComponentType> cid)
+{
+    size_t typeHash = typeid(std::remove_const_t<ComponentType>).hash_code();
+    // First try to find it
+    auto itf = reg.holders.find(cid.hash);
+    if (itf != reg.holders.end())
+    {
+        assert(itf->second.typeHash == typeHash);
+        if (itf->second.typeHash != typeHash)
+            return;
+        SparseSet<std::remove_const_t<ComponentType>>& set = *(SparseSet<std::remove_const_t<ComponentType>>*)itf->second.set;
+        if (eid >= set.indices.size())
+            return;
+        int idx = set.indices[eid];
+        if (idx < 0 || set.entities[idx] != eid)
+            return;
+        foo(set.data[idx]);
+    }
+    else
+    {
+        // TODO: maybe assert? it makes sense to tell end user that you're querying some component
+        // which wasn't even registered.
+    }
+}
+
+template<typename ComponentType>
+inline SparseSet<std::remove_const_t<ComponentType>>* registry_get(const Registry& reg, ComponentId<ComponentType> cid)
+{
+    auto it = reg.holders.find(cid.hash);
+    if (it != reg.holders.end())
+        return (SparseSet<std::remove_const_t<ComponentType>>*)(it->second.set);
+    return nullptr;
+}
+
+template<typename Callable, typename... ComponentTypes, std::size_t... Is>
+void query_components_impl(Registry& registry, EntityId eid, Callable func, const std::tuple<ComponentId<ComponentTypes>...>& args_tuple,
+        std::index_sequence<Is...>)
+{
+    // If no components were requested, there's nothing to do.
+    if constexpr (sizeof...(ComponentTypes) == 0)
+        return;
+
+    std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
+
+    if ((... || (std::get<Is>(componentSets) == nullptr)))
+        return;
+
+    const bool inAllSets = (std::get<Is>(componentSets)->has(eid) && ...);
+
+    if (inAllSets)
+        func(std::get<Is>(componentSets)->get(eid)...);
+}
+
+template<typename Callable, typename... ComponentTypes>
+void query_components(Registry& reg, EntityId eid, Callable func, ComponentId<ComponentTypes>... cid)
+{
+    query_components_impl(reg, eid, func, std::make_tuple(cid...), std::index_sequence_for<ComponentTypes...>{});
+}
+
+inline EntityId create_entity(Registry& reg, const char* name)
+{
+    auto retEid = [&](EntityId eid)
+    {
+        if (name)
+        {
+            reg.entityNames[std::string(name)] = eid;
+            reg.entityToName[eid] = std::string(name);
+        }
+        return eid;
+    };
+    if (reg.freeEidsList.empty())
+        return retEid(reg.lastValidEid++);
+    EntityId lastEid = reg.freeEidsList.back();
+    reg.freeEidsList.pop_back();
+    return retEid(lastEid);
+}
+
+inline EntityId find_entity(Registry& reg, const char* name)
+{
+    auto itf = reg.entityNames.find(name);
+    if (itf == reg.entityNames.end())
+        return invalid_eid;
+    return itf->second;
+}
+
+template<typename T>
+inline void del_comp_impl(SparseSet<T>& set, EntityId eid)
+{
+    if (eid >= set.indices.size())
+        return; // can do nothing
+
+    int idx = set.indices[eid];
+    if (idx < 0)
+        return; // can do nothing
+
+    set.indices[eid] = -1; // TODO: work on shrink to fit here
+    size_t lastIdx = set.data.size() - 1;
+    if (idx == lastIdx) // last entity
+    {
+        set.entities.erase(set.entities.begin() + idx);
+        set.data.erase(set.data.begin() + idx);
+    }
+    else
+    {
+        EntityId lastEid = set.entities[lastIdx];
+
+        set.indices[lastEid] = idx;
+        set.entities[idx] = set.entities[lastIdx];
+        set.data[idx] = set.data[lastIdx];
+
+        set.entities.erase(set.entities.begin() + lastIdx);
+        set.data.erase(set.data.begin() + lastIdx);
+    }
+}
+
+inline void delete_component(SparseSetHolder& holder, EntityId eid)
+{
+    if (!holder.set)
+        return;
+    holder.set->delComponent(eid);
+}
+
+inline void del_entity(Registry& reg, EntityId eid)
+{
+    if (eid + 1 == reg.lastValidEid)
+        reg.lastValidEid = eid;
+    else
+        reg.freeEidsList.push_back(eid);
+    // Go through all holders and delete components
+    for (auto& [nameHash, holder] : reg.holders)
+        delete_component(holder, eid);
+    // Search for name and clear it
+    auto itf = reg.entityToName.find(eid);
+    if (itf != reg.entityToName.end())
+    {
+        reg.entityNames.erase(itf->second);
+        reg.entityToName.erase(itf);
+    }
+}
+
+inline void del_all_entities(Registry& reg)
+{
+  reg.lastValidEid = 0;
+  reg.freeEidsList.clear();
+  reg.entityNames.clear();
+  reg.entityToName.clear();
+  reg.holders.clear();
+}
+
+inline void del_all_systems(Registry& reg)
+{
+  for (Registry::CachedQueryBase* q : reg.systems)
+    delete q;
+  reg.systems.clear();
+}
+
+template<typename ComponentType>
+inline void del_component(Registry& reg, EntityId eid, ComponentId<ComponentType> cid)
+{
+    size_t typeHash = typeid(ComponentType).hash_code();
+    // First try to find it
+    auto itf = reg.holders.find(cid.hash);
+    if (itf != reg.holders.end())
+    {
+        assert(itf->second.typeHash == typeHash);
+        if (itf->second.typeHash != typeHash)
+            return;
+        SparseSet<ComponentType>& set = *(SparseSet<ComponentType>*)itf->second.set;
+        set.delComponent(eid);
+    }
+}
+
+template<typename Callable, typename... ComponentTypes, std::size_t... Is>
+inline void query_entities_impl(Registry& registry, Callable func, const std::tuple<ComponentId<ComponentTypes>...>& args_tuple,
+                                std::index_sequence<Is...>)
+{
+    // If no components were requested, there's nothing to do.
+    if constexpr (sizeof...(ComponentTypes) == 0)
+        return;
+
+    std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
+
+    if ((... || (std::get<Is>(componentSets) == nullptr)))
+        return;
+
+    size_t minSize = std::numeric_limits<size_t>::max();
+    const void* smallestSetPtr = nullptr;
+
+    // This fold expression finds the size of each set by index and tracks the smallest.
+    ((void)(
+        (std::get<Is>(componentSets)->entities.size() < minSize) &&
+        (minSize = std::get<Is>(componentSets)->entities.size(), smallestSetPtr = static_cast<const void*>(std::get<Is>(componentSets)))
+    ), ...);
+
+    if (minSize == 0)
+        return; // No entities have all components if one set is empty.
+
+    std::vector<EntityId> entitiesToCheck;
+    // This fold expression finds the set matching the smallestSetPtr and gets its entities.
+    ((void)(
+        (static_cast<const void*>(std::get<Is>(componentSets)) == smallestSetPtr) &&
+        (entitiesToCheck = std::get<Is>(componentSets)->entities, true)
+    ), ...);
+
+
+    for (EntityId entity : entitiesToCheck)
+    {
+        // For each entity, check if it exists in ALL the other sets.
+        const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
+
+        if (inAllSets)
+            func(entity, std::get<Is>(componentSets)->get(entity)...);
+    }
+}
+
+template<typename Callable, typename... ComponentTypes>
+inline void query_entities(Registry& registry, Callable func, ComponentId<ComponentTypes>... args)
+{
+    // Create an index sequence for the component types
+    // and call the implementation function.
+    query_entities_impl(registry, func, std::make_tuple(args...), std::index_sequence_for<ComponentTypes...>{});
+}
+
+template<typename Callable, typename... ComponentTypes>
+void Registry::CachedQuery<Callable, ComponentTypes...>::execute(Registry& reg)
+{
+    query_entities_impl(reg, func, componentIds, std::index_sequence_for<ComponentTypes...>{});
+}
+
+
+template<typename Callable, typename... ComponentTypes>
+void reg_system(Registry& reg, Callable func, ComponentId<ComponentTypes>... args)
+{
+    Registry::CachedQuery<Callable, ComponentTypes...>* q = new Registry::CachedQuery<Callable, ComponentTypes...>(func, args...);
+    reg.systems.emplace_back(q);
+}
+
+inline void step(Registry& reg)
+{
+    for (Registry::CachedQueryBase* q : reg.systems)
+        q->execute(reg);
+}
+

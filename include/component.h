@@ -1,3 +1,4 @@
+#pragma once
 #include "fnv1.h"
 
 namespace eecs

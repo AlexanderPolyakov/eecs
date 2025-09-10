@@ -8,6 +8,7 @@
 #include "entity.h"
 #include "sparse_set.h"
 #include "component.h"
+#include "prefab.h"
 #include "functional.h"
 #include "registry.h"
 #include "entity_wrap.h" // This one is optional btw, we can probably let user decide if they want it (though it's very useful)

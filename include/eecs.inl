@@ -155,6 +155,42 @@ inline EntityId create_entity(Registry& reg, const char* name)
     return retEid(lastEid);
 }
 
+inline EntityId create_prefab(Registry& reg, const char* name)
+{
+    EntityId eid = create_entity(reg, name);
+    set_component(reg, eid, eecs::kPrefabTag, {});
+    return eid;
+}
+
+inline EntityId create_from_prefab(Registry& reg, EntityId prefabEid, const char* name)
+{
+    EntityId eid = create_entity(reg, name);
+    for (auto& [hash, holder] : reg.holders)
+    {
+        if (hash == kPrefabTag.hash)
+            continue;
+        if (!holder.set || !holder.set->has(prefabEid))
+            continue;
+        holder.set->cloneEntity(prefabEid, eid);
+    }
+    return eid;
+}
+
+inline void make_prefab(Registry& reg, EntityId eid)
+{
+    set_component(reg, eid, eecs::kPrefabTag, {});
+}
+
+inline bool is_prefab(Registry& reg, EntityId eid)
+{
+    auto itf = reg.holders.find(kPrefabTag.hash);
+    if (itf == reg.holders.end())
+        return false;
+
+    const SparseSetBase& set = *itf->second.set;
+    return set.has(eid);
+}
+
 inline EntityId find_entity(Registry& reg, const char* name)
 {
     auto itf = reg.entityNames.find(name);
@@ -264,31 +300,27 @@ inline void query_entities_impl(Registry& registry, Callable func, const std::tu
         return;
 
     size_t minSize = std::numeric_limits<size_t>::max();
-    const void* smallestSetPtr = nullptr;
+    const SparseSetBase* smallestSetPtr = nullptr;
 
     // This fold expression finds the size of each set by index and tracks the smallest.
     ((void)(
         (std::get<Is>(componentSets)->entities.size() < minSize) &&
-        (minSize = std::get<Is>(componentSets)->entities.size(), smallestSetPtr = static_cast<const void*>(std::get<Is>(componentSets)))
+        (minSize = std::get<Is>(componentSets)->entities.size(), smallestSetPtr = static_cast<const SparseSetBase*>(std::get<Is>(componentSets)))
     ), ...);
 
     if (minSize == 0)
         return; // No entities have all components if one set is empty.
 
-    std::vector<EntityId> entitiesToCheck;
-    // This fold expression finds the set matching the smallestSetPtr and gets its entities.
-    ((void)(
-        (static_cast<const void*>(std::get<Is>(componentSets)) == smallestSetPtr) &&
-        (entitiesToCheck = std::get<Is>(componentSets)->entities, true)
-    ), ...);
-
+    // TODO: this is actually a copy which can be expensive, but we might get a better solution if we omit copying (though insert/erase will be more painful this way)
+    std::vector<EntityId> entitiesToCheck = smallestSetPtr->entities;
 
     for (EntityId entity : entitiesToCheck)
     {
         // For each entity, check if it exists in ALL the other sets.
         const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
+        const bool isPrefab = is_prefab(registry, entity);
 
-        if (inAllSets)
+        if (inAllSets && !isPrefab)
             func(entity, std::get<Is>(componentSets)->get(entity)...);
     }
 }

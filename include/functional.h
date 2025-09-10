@@ -22,9 +22,14 @@ template<typename Callable, typename... ComponentTypes>
 void query_components(Registry& reg, EntityId eid, Callable foo, ComponentId<ComponentTypes>... cid);
 
 EntityId create_entity(Registry& reg, const char* name = nullptr);
+EntityId create_prefab(Registry& reg, const char* name = nullptr);
+EntityId create_from_prefab(Registry& reg, EntityId prefabEid, const char* name = nullptr);
+void make_prefab(Registry& reg, EntityId eid);
 void del_entity(Registry& reg, EntityId eid);
 void del_all_entities(Registry& reg);
 void del_all_systems(Registry& reg);
+
+bool is_prefab(Registry& reg, EntityId eid);
 
 EntityId find_entity(Registry& reg, const char* name);
 

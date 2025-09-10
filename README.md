@@ -27,7 +27,7 @@ And then run executables built in `build/` directory.
 - [ ] Tests!
 
 ## Examples
-Look in the `samples` folder, they're concise, but generally you have to
+Take a look at the `samples` folder, they're concise, but generally you have to
 * Create your registry somewhere: `eecs::Registry reg;`
 * Create an entity: `eecs::EntityId eid = create_entity(reg);`
 * Set value for components: `set_component(reg, eid, COMPID(float, position), 0.f);`
@@ -78,6 +78,13 @@ eecs::reg_system(reg, [&](eecs::EntityId eid, float& position, float velocity)
 
 * And step all systems in registry: `eecs::step(reg);`
     * Systems are executed in the order of their registration, there's no way to reorder systems (yet?)
+
+* If you want to use prefabs to reuse some of the components, it's easy to do so too:
+    * Create a prefab either via `eecs::EntityId myPrefab = eecs::create_prefab(reg);` or via a wrap `eecs::EntityWrap myPrefab = eecs::create_prefab_wrap(reg);`
+    * Add components to your prefab: `myPrefab.set(COMPID(float, timer), 0.f).set(COMPID(int, experience), 0);`
+    * Then _clone_ your entity from that prefab: `eecs::create_wrap_from_prefab(reg, myPrefab)`
+    * And you're good to go
+    * You can make prefabs from prefabs, or make any entity a prefab via `toprefab()` function in the `EntityWrap` or via standalone `make_prefab(reg, eid)`
 
 ## Projects using eecs
 ### [Scampi](https://apoly.itch.io/scampi)

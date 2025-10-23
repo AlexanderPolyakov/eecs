@@ -15,6 +15,9 @@ void set_component(Registry& reg, EntityId eid, ComponentId<ComponentType> cid, 
 template<typename ComponentType>
 ComponentType get_comp_or(Registry& reg, EntityId eid, ComponentId<ComponentType> cid, const ComponentType& def);
 
+template<typename ComponentType>
+bool has_comp(Registry& reg, EntityId eid, ComponentId<ComponentType> cid);
+
 template<typename ComponentType, typename Callable>
 void query_component(Registry& reg, EntityId eid, Callable foo, ComponentId<ComponentType> cid);
 

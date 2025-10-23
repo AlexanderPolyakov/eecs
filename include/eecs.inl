@@ -77,6 +77,26 @@ inline ComponentType get_comp_or(Registry& reg, EntityId eid, ComponentId<Compon
     return set.data[idx];
 }
 
+template<typename ComponentType>
+inline bool has_comp(Registry& reg, EntityId eid, ComponentId<ComponentType> cid)
+{
+    size_t typeHash = typeid(ComponentType).hash_code();
+    // First try to find it
+    auto itf = reg.holders.find(cid.hash);
+    if (itf == reg.holders.end())
+        return false;
+    assert(itf->second.typeHash == typeHash);
+    if (itf->second.typeHash != typeHash)
+        return false;
+    SparseSet<ComponentType>& set = *(SparseSet<ComponentType>*)itf->second.set;
+    if (eid >= set.indices.size())
+        return false;
+    int idx = set.indices[eid];
+    if (idx < 0 || set.entities[idx] != eid)
+        return false;
+    return true;
+}
+
 template<typename ComponentType, typename Callable>
 inline void query_component(Registry& reg, EntityId eid, Callable foo, ComponentId<ComponentType> cid)
 {

@@ -30,6 +30,29 @@ struct EntityWrap
         make_prefab(reg, eid);
         return *this;
     }
+
+    template<typename Component>
+    bool has(ComponentId<Component> cid)
+    {
+        return has_comp(reg, eid, cid);
+    }
+
+    template<typename Component>
+    Component get_or(ComponentId<Component> cid, Component def)
+    {
+        return get_comp_or(reg, eid, cid, def);
+    }
+
+    template<typename Component, typename Callable>
+    void query_comp(Callable c, ComponentId<Component> cid)
+    {
+        query_component(reg, eid, c, cid);
+    }
+    template<typename... Component, typename Callable>
+    void query_comps(Callable c, ComponentId<Component>... cid)
+    {
+        query_components(reg, eid, c, cid...);
+    }
 };
 
 inline EntityWrap wrap_entity(Registry& reg, EntityId eid) { return EntityWrap(reg, eid); }

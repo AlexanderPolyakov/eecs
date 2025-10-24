@@ -225,11 +225,22 @@ inline bool is_prefab(Registry& reg, EntityId eid)
     return set.has(eid);
 }
 
+template<typename Callable>
+void entity_name(const Registry& reg, EntityId eid, Callable c)
+{
+    auto itf = reg.entityToName.find(eid);
+    if (itf != reg.entityToName.end())
+        c(itf->second);
+}
+
 inline EntityId find_entity(Registry& reg, const char* name)
 {
     auto itf = reg.entityNames.find(name);
     if (itf == reg.entityNames.end())
+    {
+        printf("cannot find entity with the name '%s'\n", name);
         return invalid_eid;
+    }
     return itf->second;
 }
 

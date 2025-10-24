@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <typeinfo>
 #include <assert.h> // TODO: replace with in-house assert?
-
+#include <string>
+#include <limits>
 #include "entity.h"
 #include "sparse_set.h"
 #include "component.h"

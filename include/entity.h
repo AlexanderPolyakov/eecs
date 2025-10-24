@@ -1,4 +1,5 @@
 #pragma once
+#include <cinttypes>
 
 namespace eecs
 {

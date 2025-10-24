@@ -45,6 +45,11 @@ void query_entities(Registry& registry, Callable func, ComponentId<ComponentType
 template<typename Callable, typename... ComponentTypes>
 void reg_system(Registry& reg, Callable func, ComponentId<ComponentTypes>... args);
 
+template<typename Callable, typename... ComponentTypes>
+void reg_enter(Registry& reg, Callable func, ComponentId<ComponentTypes>... args);
+template<typename Callable, typename... ComponentTypes>
+void reg_exit(Registry& reg, Callable func, ComponentId<ComponentTypes>... args);
+
 void step(Registry& reg);
 
 }

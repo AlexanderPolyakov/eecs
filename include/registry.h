@@ -7,8 +7,12 @@ struct Registry
 {
     struct CachedQueryBase
     {
-        virtual void execute(Registry& reg) = 0;
+        virtual void execute(Registry& reg) const = 0;
+        virtual void executeOn(Registry& reg, EntityId eid) const = 0;
+        virtual bool includesEntity(Registry& reg, EntityId eid) const = 0;
         virtual ~CachedQueryBase() {};
+
+        virtual bool includesCompHash(fnv1_hash_t hash) const = 0;
     };
 
     template<typename Callable, typename... ComponentTypes>
@@ -22,12 +26,18 @@ struct Registry
         std::tuple<ComponentId<ComponentTypes>...> componentIds;
         Callable func;
 
-        void execute(Registry& reg) final;
+        void execute(Registry& reg) const final;
+        void executeOn(Registry& reg, EntityId eid) const final;
+        bool includesEntity(Registry& reg, EntityId eid) const final;
         ~CachedQuery() final {};
+        bool includesCompHash(fnv1_hash_t hash) const final;
     };
 
     std::unordered_map<fnv1_hash_t, SparseSetHolder> holders;
     std::vector<CachedQueryBase*> systems;
+
+    std::vector<CachedQueryBase*> onEnter;
+    std::vector<CachedQueryBase*> onExit;
 
     std::unordered_map<EntityId, std::string> entityToName;
     std::unordered_map<std::string, EntityId> entityNames; // TODO: I don't like that it's a separate thing, can we make it a component and have an unordered map there for quick nav?

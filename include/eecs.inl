@@ -36,6 +36,16 @@ void set_component(Registry& reg, EntityId eid, ComponentId<ComponentType> cid, 
         assert(itf->second.typeHash == typeHash);
         if (itf->second.typeHash != typeHash)
             return;
+
+        std::vector<Registry::CachedQueryBase*> toExecute;
+        for (Registry::CachedQueryBase* q : reg.onEnter)
+            if (q->includesCompHash(cid.hash) && !q->includesEntity(reg, eid))
+                toExecute.emplace_back(q);
+        auto execEnter = [&]()
+        {
+            for (Registry::CachedQueryBase* q : toExecute)
+                q->executeOn(reg, eid);
+        };
         SparseSet<ComponentType>& set = *(SparseSet<ComponentType>*)itf->second.set;
         while (eid >= set.indices.size())
             set.indices.emplace_back(-1);
@@ -46,10 +56,14 @@ void set_component(Registry& reg, EntityId eid, ComponentId<ComponentType> cid, 
             set.indices[eid] = i;
             set.entities.emplace_back(eid);
             set.data.emplace_back(val);
+
+            execEnter();
             return;
         }
         assert(set.entities[idx] == eid);
         set.data[idx] = val;
+
+        execEnter();
     }
     else
     {
@@ -249,10 +263,13 @@ inline void del_comp_impl(SparseSet<T>& set, EntityId eid)
     }
 }
 
-inline void delete_component(SparseSetHolder& holder, EntityId eid)
+inline void delete_component(Registry& reg, SparseSetHolder& holder, fnv1_hash_t nameHash, EntityId eid)
 {
     if (!holder.set)
         return;
+    for (Registry::CachedQueryBase* q : reg.onExit)
+        if (q->includesCompHash(nameHash))
+            q->executeOn(reg, eid);
     holder.set->delComponent(eid);
 }
 
@@ -264,7 +281,7 @@ inline void del_entity(Registry& reg, EntityId eid)
         reg.freeEidsList.push_back(eid);
     // Go through all holders and delete components
     for (auto& [nameHash, holder] : reg.holders)
-        delete_component(holder, eid);
+        delete_component(reg, holder, nameHash, eid);
     // Search for name and clear it
     auto itf = reg.entityToName.find(eid);
     if (itf != reg.entityToName.end())
@@ -287,7 +304,13 @@ inline void del_all_systems(Registry& reg)
 {
   for (Registry::CachedQueryBase* q : reg.systems)
     delete q;
+  for (Registry::CachedQueryBase* q : reg.onEnter)
+    delete q;
+  for (Registry::CachedQueryBase* q : reg.onExit)
+    delete q;
   reg.systems.clear();
+  reg.onEnter.clear();
+  reg.onExit.clear();
 }
 
 template<typename ComponentType>
@@ -302,8 +325,47 @@ inline void del_component(Registry& reg, EntityId eid, ComponentId<ComponentType
         if (itf->second.typeHash != typeHash)
             return;
         SparseSet<ComponentType>& set = *(SparseSet<ComponentType>*)itf->second.set;
-        set.delComponent(eid);
+        delete_component(reg, itf->second, cid.hash, eid);
     }
+}
+
+template<typename Callable, typename... ComponentTypes, std::size_t... Is>
+inline void execute_impl(Registry& registry, EntityId entity, Callable func, const std::tuple<ComponentId<ComponentTypes>...>& args_tuple,
+                         std::index_sequence<Is...>)
+{
+    // If no components were requested, there's nothing to do.
+    if constexpr (sizeof...(ComponentTypes) == 0)
+        return;
+
+    std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
+
+    if ((... || (std::get<Is>(componentSets) == nullptr)))
+        return;
+
+    const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
+    const bool isPrefab = is_prefab(registry, entity);
+
+    if (inAllSets && !isPrefab)
+        func(entity, std::get<Is>(componentSets)->get(entity)...);
+}
+
+template<typename... ComponentTypes, std::size_t... Is>
+inline bool includes_entity_impl(Registry& registry, EntityId entity, const std::tuple<ComponentId<ComponentTypes>...>& args_tuple,
+                                 std::index_sequence<Is...>)
+{
+    // If no components were requested, there's nothing to do.
+    if constexpr (sizeof...(ComponentTypes) == 0)
+        return false;
+
+    std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
+
+    if ((... || (std::get<Is>(componentSets) == nullptr)))
+        return false;
+
+    const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
+    const bool isPrefab = is_prefab(registry, entity);
+
+    return inAllSets && !isPrefab;
 }
 
 template<typename Callable, typename... ComponentTypes, std::size_t... Is>
@@ -354,17 +416,54 @@ inline void query_entities(Registry& registry, Callable func, ComponentId<Compon
 }
 
 template<typename Callable, typename... ComponentTypes>
-void Registry::CachedQuery<Callable, ComponentTypes...>::execute(Registry& reg)
+void Registry::CachedQuery<Callable, ComponentTypes...>::execute(Registry& reg) const
 {
     query_entities_impl(reg, func, componentIds, std::index_sequence_for<ComponentTypes...>{});
 }
 
+template<typename Callable, typename... ComponentTypes>
+void Registry::CachedQuery<Callable, ComponentTypes...>::executeOn(Registry& reg, EntityId eid) const
+{
+    execute_impl(reg, eid, func, componentIds, std::index_sequence_for<ComponentTypes...>{});
+}
 
 template<typename Callable, typename... ComponentTypes>
-void reg_system(Registry& reg, Callable func, ComponentId<ComponentTypes>... args)
+bool Registry::CachedQuery<Callable, ComponentTypes...>::includesEntity(Registry& reg, EntityId eid) const
+{
+    return includes_entity_impl(reg, eid, componentIds, std::index_sequence_for<ComponentTypes...>{});
+}
+
+template<typename... ComponentTypes, std::size_t... Is>
+inline bool has_hash(fnv1_hash_t hash, const std::tuple<ComponentId<ComponentTypes>...>& args_tuple, std::index_sequence<Is...>)
+{
+    return (... || (std::get<Is>(args_tuple).hash == hash));
+}
+
+template<typename Callable, typename... ComponentTypes>
+bool Registry::CachedQuery<Callable, ComponentTypes...>::includesCompHash(fnv1_hash_t hash) const
+{
+    return has_hash(hash, componentIds, std::index_sequence_for<ComponentTypes...>{});
+}
+
+template<typename Callable, typename... ComponentTypes>
+inline void reg_system(Registry& reg, Callable func, ComponentId<ComponentTypes>... args)
 {
     Registry::CachedQuery<Callable, ComponentTypes...>* q = new Registry::CachedQuery<Callable, ComponentTypes...>(func, args...);
     reg.systems.emplace_back(q);
+}
+
+template<typename Callable, typename... ComponentTypes>
+inline void reg_enter(Registry& reg, Callable func, ComponentId<ComponentTypes>... args)
+{
+    Registry::CachedQuery<Callable, ComponentTypes...>* q = new Registry::CachedQuery<Callable, ComponentTypes...>(func, args...);
+    reg.onEnter.emplace_back(q);
+}
+
+template<typename Callable, typename... ComponentTypes>
+inline void reg_exit(Registry& reg, Callable func, ComponentId<ComponentTypes>... args)
+{
+    Registry::CachedQuery<Callable, ComponentTypes...>* q = new Registry::CachedQuery<Callable, ComponentTypes...>(func, args...);
+    reg.onExit.emplace_back(q);
 }
 
 inline void step(Registry& reg)

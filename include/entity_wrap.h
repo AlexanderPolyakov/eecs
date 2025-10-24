@@ -60,6 +60,7 @@ inline EntityWrap create_entity_wrap(Registry& reg, const char* name = nullptr) 
 inline EntityWrap create_prefab_wrap(Registry& reg, const char* name = nullptr) { return EntityWrap(reg, create_prefab(reg, name)); }
 inline EntityWrap create_wrap_from_prefab(Registry& reg, EntityId prefabEid, const char* name = nullptr) { return EntityWrap(reg, create_from_prefab(reg, prefabEid, name)); }
 inline EntityWrap create_wrap_from_prefab(Registry& reg, EntityWrap prefabWrap, const char* name = nullptr) { return EntityWrap(reg, create_from_prefab(reg, prefabWrap.eid, name)); }
+inline EntityWrap find_entity_wrap(Registry& reg, const char* name) { return EntityWrap(reg, eecs::find_entity(reg, name)); }
 
 }
 

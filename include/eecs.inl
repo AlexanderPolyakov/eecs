@@ -354,9 +354,9 @@ inline void execute_impl(Registry& registry, EntityId entity, Callable func, con
         return;
 
     const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
-    const bool isPrefab = is_prefab(registry, entity);
+    //const bool isPrefab = is_prefab(registry, entity);
 
-    if (inAllSets && !isPrefab)
+    if (inAllSets)
         func(entity, std::get<Is>(componentSets)->get(entity)...);
 }
 
@@ -374,9 +374,8 @@ inline bool includes_entity_impl(Registry& registry, EntityId entity, const std:
         return false;
 
     const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
-    const bool isPrefab = is_prefab(registry, entity);
 
-    return inAllSets && !isPrefab;
+    return inAllSets;
 }
 
 template<typename Callable, typename... ComponentTypes, std::size_t... Is>

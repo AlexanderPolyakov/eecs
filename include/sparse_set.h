@@ -13,6 +13,7 @@ struct SparseSetBase
 
     virtual void delComponent(EntityId eid) = 0;
     virtual void cloneEntity(EntityId from, EntityId to) = 0;
+    virtual void* getCompPtr(EntityId eid) = 0;
 };
 
 // Forward declaration for inline virtual destructor
@@ -48,6 +49,7 @@ struct SparseSet : public SparseSetBase
     virtual ~SparseSet() {}
     void delComponent(EntityId eid) final { del_comp_impl(*this, eid); };
     void cloneEntity(EntityId from, EntityId to) final { details::clone_entity(*this, from, to); }
+    virtual void* getCompPtr(EntityId eid) { return (void*)&data[indices[eid]]; }
 };
 
 // Due to std::vector<bool> being not really a vector of bools, but implementation specific thing.
@@ -62,19 +64,23 @@ struct SparseSet<bool> : public SparseSetBase
     virtual ~SparseSet() {}
     void delComponent(EntityId eid) final { del_comp_impl(*this, eid); };
     void cloneEntity(EntityId from, EntityId to) final { details::clone_entity(*this, from, to); }
+    virtual void* getCompPtr(EntityId eid) { return (void*)&data[indices[eid]]; }
 };
 
 struct SparseSetHolder
 {
     size_t typeHash; // for validation
     SparseSetBase* set = nullptr;
+    std::string name; // for reflection
 
     SparseSetHolder() = delete;
-    SparseSetHolder(size_t type_hash, SparseSetBase* in_set) : typeHash(type_hash), set(in_set) {}
+    SparseSetHolder(size_t type_hash, const char* in_name, SparseSetBase* in_set) : typeHash(type_hash), name(in_name), set(in_set) {}
     SparseSetHolder(const SparseSetHolder& hold) = delete;
     SparseSetHolder(SparseSetHolder&& hold) : typeHash(hold.typeHash)
     {
+        typeHash = hold.typeHash;
         std::swap(set, hold.set);
+        std::swap(name, hold.name);
     }
 
     ~SparseSetHolder()
@@ -87,6 +93,7 @@ struct SparseSetHolder
     {
         typeHash = hold.typeHash;
         std::swap(set, hold.set);
+        std::swap(name, hold.name);
         return *this;
     }
 };

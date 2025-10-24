@@ -1,7 +1,7 @@
 template<typename ComponentType>
-inline SparseSetHolder create_sparse_set_holder()
+inline SparseSetHolder create_sparse_set_holder(ComponentId<ComponentType> cid)
 {
-    return SparseSetHolder(typeid(ComponentType).hash_code(), (SparseSetBase*)new SparseSet<ComponentType>());
+    return SparseSetHolder(typeid(ComponentType).hash_code(), cid.sourceStr, (SparseSetBase*)new SparseSet<ComponentType>());
 }
 
 template<typename ComponentType>
@@ -17,7 +17,7 @@ void reg_component(Registry& reg, ComponentId<ComponentType> cid)
         return;
     }
 
-    reg.holders.emplace(cid.hash, create_sparse_set_holder<ComponentType>());
+    reg.holders.emplace(cid.hash, create_sparse_set_holder(cid));
 }
 
 template<typename ComponentType>
@@ -28,7 +28,7 @@ void set_component(Registry& reg, EntityId eid, ComponentId<ComponentType> cid, 
     auto itf = reg.holders.find(cid.hash);
     if (itf == reg.holders.end())
     {
-        reg.holders.emplace(cid.hash, create_sparse_set_holder<ComponentType>());
+        reg.holders.emplace(cid.hash, create_sparse_set_holder(cid));
         itf = reg.holders.find(cid.hash);
     }
     if (itf != reg.holders.end())

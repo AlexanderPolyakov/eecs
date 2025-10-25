@@ -210,6 +210,18 @@ inline EntityId create_from_prefab(Registry& reg, EntityId prefabEid, const char
     return eid;
 }
 
+inline void copy_from_prefab(Registry& reg, EntityId prefabEid, EntityId eid)
+{   // if this is correct we can replace the duplicate code in create_from_prefab
+    for (auto& [hash, holder] : reg.holders)
+    {
+        if (hash == kPrefabTag.hash)
+            continue;
+        if (!holder.set || !holder.set->has(prefabEid))
+            continue;
+        holder.set->cloneEntity(prefabEid, eid);
+    }
+}
+
 inline void make_prefab(Registry& reg, EntityId eid)
 {
     set_component(reg, eid, eecs::kPrefabTag, {});

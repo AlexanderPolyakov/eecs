@@ -368,10 +368,11 @@ inline void execute_impl(Registry& registry, EntityId entity, Callable func, con
         return;
 
     std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
-
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
     if ((... || (std::get<Is>(componentSets) == nullptr)))
         return;
-
+#pragma clang diagnostic pop
     const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
     //const bool isPrefab = is_prefab(registry, entity);
 
@@ -410,8 +411,11 @@ inline bool includes_entity_impl(Registry& registry, EntityId entity, const std:
 
     std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
     if ((... || (std::get<Is>(componentSets) == nullptr)))
         return false;
+#pragma clang diagnostic pop
 
     const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
 
@@ -427,9 +431,11 @@ inline void query_entities_impl(Registry& registry, Callable func, const std::tu
         return;
 
     std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
-
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
     if ((... || (std::get<Is>(componentSets) == nullptr)))
         return;
+#pragma clang diagnostic pop
 
     size_t minSize = std::numeric_limits<size_t>::max();
     const SparseSetBase* smallestSetPtr = nullptr;
@@ -492,7 +498,10 @@ bool Registry::CachedQuery<Callable, ComponentTypes...>::includesEntity(Registry
 template<typename... ComponentTypes, std::size_t... Is>
 inline bool has_hash(fnv1_hash_t hash, const std::tuple<ComponentId<ComponentTypes>...>& args_tuple, std::index_sequence<Is...>)
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
     return (... || (std::get<Is>(args_tuple).hash == hash));
+#pragma clang diagnostic pop
 }
 
 template<typename Callable, typename... ComponentTypes>

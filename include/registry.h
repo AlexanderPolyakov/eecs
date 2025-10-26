@@ -36,6 +36,7 @@ struct Registry
     std::unordered_map<fnv1_hash_t, SparseSetHolder> holders;
     std::vector<CachedQueryBase*> systems;
 
+    std::unordered_map<fnv1_hash_t, std::vector<CachedQueryBase*>> eventHandlers;
     std::vector<CachedQueryBase*> onEnter;
     std::vector<CachedQueryBase*> onExit;
 

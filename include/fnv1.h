@@ -13,3 +13,5 @@ constexpr fnv1_hash_t fnv1StrHash(const char* str)
     return result;
 }
 
+#define FNV1(name) fnv1StrHash(#name)
+

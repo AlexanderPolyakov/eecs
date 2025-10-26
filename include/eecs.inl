@@ -331,9 +331,16 @@ inline void del_all_systems(Registry& reg)
     delete q;
   for (Registry::CachedQueryBase* q : reg.onExit)
     delete q;
+  for (auto& [hash, qs] : reg.eventHandlers)
+  {
+      for (Registry::CachedQueryBase* q : qs)
+          delete q;
+      qs.clear();
+  }
   reg.systems.clear();
   reg.onEnter.clear();
   reg.onExit.clear();
+  reg.eventHandlers.clear();
 }
 
 template<typename ComponentType>
@@ -486,6 +493,29 @@ inline void reg_exit(Registry& reg, Callable func, ComponentId<ComponentTypes>..
 {
     Registry::CachedQuery<Callable, ComponentTypes...>* q = new Registry::CachedQuery<Callable, ComponentTypes...>(func, args...);
     reg.onExit.emplace_back(q);
+}
+
+template<typename Callable, typename... ComponentTypes>
+inline void on_event(Registry& reg, fnv1_hash_t evtName, Callable func, ComponentId<ComponentTypes>... args)
+{
+    Registry::CachedQuery<Callable, ComponentTypes...>* q = new Registry::CachedQuery<Callable, ComponentTypes...>(func, args...);
+    auto itf = reg.eventHandlers.find(evtName);
+    if (itf == reg.eventHandlers.end())
+        reg.eventHandlers.emplace(evtName, std::vector<Registry::CachedQueryBase*>({q}));
+    else
+        itf->second.emplace_back(q);
+}
+
+inline void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid)
+{
+    auto itf = reg.eventHandlers.find(evtName);
+    if (itf == reg.eventHandlers.end())
+    {
+        assert(false && "Trying to emit event without anyone subcribed to it!");
+        return;
+    }
+    for (Registry::CachedQueryBase* q : itf->second)
+        q->executeOn(reg, eid);
 }
 
 inline void step(Registry& reg)

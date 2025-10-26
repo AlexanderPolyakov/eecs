@@ -15,12 +15,9 @@ struct Registry
         virtual bool includesCompHash(fnv1_hash_t hash) const = 0;
     };
 
-//#pragma clang diagnostic push
-//#pragma clang diagnostic ignored "-Weverything"
     template<typename Callable, typename... ComponentTypes>
     struct CachedQuery final : public CachedQueryBase
     {
-//#pragma diagnostic pop
         CachedQuery(Callable _func, ComponentId<ComponentTypes>... args)
         : componentIds(std::make_tuple(args...)), func(_func)
         {

@@ -333,7 +333,7 @@ inline void del_all_systems(Registry& reg)
     delete q;
   for (auto& [hash, qs] : reg.eventHandlers)
   {
-      for (Registry::CachedQueryBase* q : qs)
+      for (Registry::EventHandlerBase* q : qs)
           delete q;
       qs.clear();
   }
@@ -377,6 +377,27 @@ inline void execute_impl(Registry& registry, EntityId entity, Callable func, con
 
     if (inAllSets)
         func(entity, std::get<Is>(componentSets)->get(entity)...);
+}
+
+// TODO: think about deduplication
+template<typename Callable, typename... ComponentTypes, std::size_t... Is>
+inline void event_impl(Registry& registry, EntityId entity, EntityId sourceEid, Callable func, const std::tuple<ComponentId<ComponentTypes>...>& args_tuple,
+                         std::index_sequence<Is...>)
+{
+    // If no components were requested, there's nothing to do.
+    if constexpr (sizeof...(ComponentTypes) == 0)
+        return;
+
+    std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
+
+    if ((... || (std::get<Is>(componentSets) == nullptr)))
+        return;
+
+    const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
+    //const bool isPrefab = is_prefab(registry, entity);
+
+    if (inAllSets)
+        func(entity, sourceEid, std::get<Is>(componentSets)->get(entity)...);
 }
 
 template<typename... ComponentTypes, std::size_t... Is>
@@ -457,6 +478,12 @@ void Registry::CachedQuery<Callable, ComponentTypes...>::executeOn(Registry& reg
 }
 
 template<typename Callable, typename... ComponentTypes>
+void Registry::EventHandler<Callable, ComponentTypes...>::onEvent(Registry& reg, EntityId eid, EntityId sourceEid) const
+{
+    event_impl(reg, eid, sourceEid, func, componentIds, std::index_sequence_for<ComponentTypes...>{});
+}
+
+template<typename Callable, typename... ComponentTypes>
 bool Registry::CachedQuery<Callable, ComponentTypes...>::includesEntity(Registry& reg, EntityId eid) const
 {
     return includes_entity_impl(reg, eid, componentIds, std::index_sequence_for<ComponentTypes...>{});
@@ -498,15 +525,15 @@ inline void reg_exit(Registry& reg, Callable func, ComponentId<ComponentTypes>..
 template<typename Callable, typename... ComponentTypes>
 inline void on_event(Registry& reg, fnv1_hash_t evtName, Callable func, ComponentId<ComponentTypes>... args)
 {
-    Registry::CachedQuery<Callable, ComponentTypes...>* q = new Registry::CachedQuery<Callable, ComponentTypes...>(func, args...);
+    Registry::EventHandler<Callable, ComponentTypes...>* q = new Registry::EventHandler<Callable, ComponentTypes...>(func, args...);
     auto itf = reg.eventHandlers.find(evtName);
     if (itf == reg.eventHandlers.end())
-        reg.eventHandlers.emplace(evtName, std::vector<Registry::CachedQueryBase*>({q}));
+        reg.eventHandlers.emplace(evtName, std::vector<Registry::EventHandlerBase*>({q}));
     else
         itf->second.emplace_back(q);
 }
 
-inline void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid)
+inline void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid, EntityId sourceEid)
 {
     auto itf = reg.eventHandlers.find(evtName);
     if (itf == reg.eventHandlers.end())
@@ -514,8 +541,8 @@ inline void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid)
         assert(false && "Trying to emit event without anyone subcribed to it!");
         return;
     }
-    for (Registry::CachedQueryBase* q : itf->second)
-        q->executeOn(reg, eid);
+    for (Registry::EventHandlerBase* q : itf->second)
+        q->onEvent(reg, eid, sourceEid);
 }
 
 inline void step(Registry& reg)

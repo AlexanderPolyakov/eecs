@@ -33,10 +33,31 @@ struct Registry
         bool includesCompHash(fnv1_hash_t hash) const final;
     };
 
+    struct EventHandlerBase
+    {
+        virtual void onEvent(Registry& reg, EntityId eid, EntityId sourceEid) const = 0;
+        virtual ~EventHandlerBase() {};
+    };
+
+    template<typename Callable, typename... ComponentTypes>
+    struct EventHandler : public EventHandlerBase
+    {
+        EventHandler(Callable _func, ComponentId<ComponentTypes>... args)
+        : componentIds(std::make_tuple(args...)), func(_func)
+        {
+        }
+
+        std::tuple<ComponentId<ComponentTypes>...> componentIds;
+        Callable func;
+
+        void onEvent(Registry& reg, EntityId eid, EntityId sourceEid) const final;
+        ~EventHandler() final {};
+    };
+
     std::unordered_map<fnv1_hash_t, SparseSetHolder> holders;
     std::vector<CachedQueryBase*> systems;
 
-    std::unordered_map<fnv1_hash_t, std::vector<CachedQueryBase*>> eventHandlers;
+    std::unordered_map<fnv1_hash_t, std::vector<EventHandlerBase*>> eventHandlers;
     std::vector<CachedQueryBase*> onEnter;
     std::vector<CachedQueryBase*> onExit;
 

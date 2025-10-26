@@ -56,7 +56,7 @@ void reg_exit(Registry& reg, Callable func, ComponentId<ComponentTypes>... args)
 template<typename Callable, typename... ComponentTypes>
 void on_event(Registry& reg, fnv1_hash_t evtName, Callable func, ComponentId<ComponentTypes>... args);
 
-void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid);
+void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid, EntityId sourceEid);
 
 void step(Registry& reg);
 

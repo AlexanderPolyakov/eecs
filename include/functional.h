@@ -36,7 +36,7 @@ void del_all_systems(Registry& reg);
 bool is_prefab(Registry& reg, EntityId eid);
 
 template<typename Callable>
-void get_entity_name(Registry& reg, EntityId eid, Callable c);
+void entity_name(const Registry& reg, EntityId eid, Callable c);
 
 EntityId find_entity(Registry& reg, const char* name);
 

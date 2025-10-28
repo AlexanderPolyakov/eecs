@@ -24,6 +24,7 @@ void query_component(Registry& reg, EntityId eid, Callable foo, ComponentId<Comp
 template<typename Callable, typename... ComponentTypes>
 void query_components(Registry& reg, EntityId eid, Callable foo, ComponentId<ComponentTypes>... cid);
 
+EntityId create_or_find_entity(Registry& reg, const char* name);
 EntityId create_entity(Registry& reg, const char* name = nullptr);
 EntityId create_prefab(Registry& reg, const char* name = nullptr);
 EntityId create_from_prefab(Registry& reg, EntityId prefabEid, const char* name = nullptr);

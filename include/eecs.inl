@@ -171,6 +171,14 @@ void query_components(Registry& reg, EntityId eid, Callable func, ComponentId<Co
     query_components_impl(reg, eid, func, std::make_tuple(cid...), std::index_sequence_for<ComponentTypes...>{});
 }
 
+inline EntityId create_or_find_entity(Registry& reg, const char* name)
+{
+    eecs::EntityId eid = find_entity(reg, name);
+    if (eid == invalid_eid)
+        return create_entity(reg, name);
+    return eid;
+}
+
 inline EntityId create_entity(Registry& reg, const char* name)
 {
     auto retEid = [&](EntityId eid)

@@ -40,7 +40,7 @@ struct Registry
     };
 
     template<typename Callable, typename... ComponentTypes>
-    struct EventHandler : public EventHandlerBase
+    struct EventHandler final : public EventHandlerBase
     {
         EventHandler(Callable _func, ComponentId<ComponentTypes>... args)
         : componentIds(std::make_tuple(args...)), func(_func)

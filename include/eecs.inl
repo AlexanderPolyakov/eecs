@@ -399,8 +399,11 @@ inline void event_impl(Registry& registry, EntityId entity, EntityId sourceEid, 
 
     std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
     if ((... || (std::get<Is>(componentSets) == nullptr)))
         return;
+#pragma clang diagnostic pop
 
     const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
     //const bool isPrefab = is_prefab(registry, entity);

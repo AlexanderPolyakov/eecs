@@ -258,7 +258,7 @@ inline EntityId find_entity(Registry& reg, const char* name)
     auto itf = reg.entityNames.find(name);
     if (itf == reg.entityNames.end())
     {
-        printf("cannot find entity with the name '%s'\n", name);
+        //printf("cannot find entity with the name '%s'\n", name);
         return invalid_eid;
     }
     return itf->second;

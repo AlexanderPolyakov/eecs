@@ -405,11 +405,41 @@ inline void event_impl(Registry& registry, EntityId entity, EntityId sourceEid, 
         return;
 #pragma clang diagnostic pop
 
-    const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
-    //const bool isPrefab = is_prefab(registry, entity);
+    if (entity == eecs::invalid_eid) // means we're broadcasting!
+    {
+        // TODO: remove copy paste from query_entities_impl and unify
+        size_t minSize = std::numeric_limits<size_t>::max();
+        const SparseSetBase* smallestSetPtr = nullptr;
 
-    if (inAllSets)
-        func(entity, sourceEid, std::get<Is>(componentSets)->get(entity)...);
+        // This fold expression finds the size of each set by index and tracks the smallest.
+        ((void)(
+            (std::get<Is>(componentSets)->entities.size() < minSize) &&
+            (minSize = std::get<Is>(componentSets)->entities.size(), smallestSetPtr = static_cast<const SparseSetBase*>(std::get<Is>(componentSets)))
+        ), ...);
+
+        if (minSize == 0)
+            return; // No entities have all components if one set is empty.
+
+        // TODO: this is actually a copy which can be expensive, but we might get a better solution if we omit copying (though insert/erase will be more painful this way)
+        std::vector<EntityId> entitiesToCheck = smallestSetPtr->entities;
+
+        for (EntityId ent : entitiesToCheck)
+        {
+            // For each entity, check if it exists in ALL the other sets.
+            const bool inAllSets = (std::get<Is>(componentSets)->has(ent) && ...);
+
+            if (inAllSets)
+                func(ent, sourceEid, std::get<Is>(componentSets)->get(ent)...);
+        }
+    }
+    else
+    {
+        const bool inAllSets = (std::get<Is>(componentSets)->has(entity) && ...);
+        //const bool isPrefab = is_prefab(registry, entity);
+
+        if (inAllSets)
+            func(entity, sourceEid, std::get<Is>(componentSets)->get(entity)...);
+    }
 }
 
 template<typename... ComponentTypes, std::size_t... Is>

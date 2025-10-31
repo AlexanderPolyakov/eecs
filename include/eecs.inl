@@ -588,7 +588,7 @@ inline void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid, EntityI
     auto itf = reg.eventHandlers.find(evtName);
     if (itf == reg.eventHandlers.end())
     {
-        assert(false && "Trying to emit event without anyone subcribed to it!");
+        //assert(false && "Trying to emit event without anyone subscribed to it!");
         return;
     }
     for (Registry::EventHandlerBase* q : itf->second)

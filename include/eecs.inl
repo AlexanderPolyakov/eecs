@@ -33,9 +33,12 @@ void set_component(Registry& reg, EntityId eid, ComponentId<ComponentType> cid, 
     }
     if (itf != reg.holders.end())
     {
-        assert(itf->second.typeHash == typeHash);
         if (itf->second.typeHash != typeHash)
+        {
+            printf("error: Invalid type for comp %s\n", itf->second.name.c_str());
+            assert(itf->second.typeHash == typeHash);
             return;
+        }
 
         std::vector<Registry::CachedQueryBase*> toExecute;
         for (Registry::CachedQueryBase* q : reg.onEnter)

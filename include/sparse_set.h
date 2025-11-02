@@ -14,6 +14,7 @@ struct SparseSetBase
     virtual void delComponent(EntityId eid) = 0;
     virtual void cloneEntity(EntityId from, EntityId to) = 0;
     virtual void* getCompPtr(EntityId eid) = 0;
+    virtual SparseSetBase* createClone() = 0;
 };
 
 // Forward declaration for inline virtual destructor
@@ -50,6 +51,14 @@ struct SparseSet : public SparseSetBase
     void delComponent(EntityId eid) final { del_comp_impl(*this, eid); };
     void cloneEntity(EntityId from, EntityId to) final { details::clone_entity(*this, from, to); }
     virtual void* getCompPtr(EntityId eid) { return (void*)&data[indices[eid]]; }
+    SparseSetBase* createClone() final
+    {
+        SparseSet<ComponentType>* res = new SparseSet<ComponentType>();
+        res->indices = indices;
+        res->entities = entities;
+        res->data = data;
+        return res;
+    }
 };
 
 // Due to std::vector<bool> being not really a vector of bools, but implementation specific thing.
@@ -65,6 +74,10 @@ struct SparseSet<bool> : public SparseSetBase
     void delComponent(EntityId eid) final { del_comp_impl(*this, eid); };
     void cloneEntity(EntityId from, EntityId to) final { details::clone_entity(*this, from, to); }
     virtual void* getCompPtr(EntityId eid) { return (void*)&data[indices[eid]]; }
+    SparseSetBase* createClone() final
+    {
+        return new SparseSet<bool>();
+    }
 };
 
 struct SparseSetHolder

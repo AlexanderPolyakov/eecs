@@ -159,8 +159,16 @@ void query_components_impl(Registry& registry, EntityId eid, Callable func, cons
 
     std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
 
-    if ((... || (std::get<Is>(componentSets) == nullptr)))
-        return;
+    if constexpr (sizeof...(ComponentTypes) == 1)
+    {
+        if (std::get<0>(componentSets) == nullptr)
+            return;
+    }
+    else
+    {
+        if ((... || (std::get<Is>(componentSets) == nullptr)))
+            return;
+    }
 
     const bool inAllSets = (std::get<Is>(componentSets)->has(eid) && ...);
 

@@ -96,3 +96,14 @@ testing ground for the library.
 One of the main reasons for the rewrite was to allow named component IDs, so across 24 systems and over 30 queries there is only
 one component which is not considered a simple struct or type like `float` or `Vector2`. This allowed to get rid of a lot of code
 which was just adding burden to the system.
+
+### [Bootya](https://apoly.itch.io/bootya)
+![Screenshot of a game Bootya, showing a robot vacuum cleaning up a very dirty room](https://img.itch.zone/aW1hZ2UvMzkzOTE3OS8yMzQ5MTY5Ni5wbmc=/original/NwYaVx.png)
+Bootya was developed in 3 days for Ludum Dare and it utilized `eecs` from the start. It was an additional proof that library is mature enough to make simple games fast.
+
+### [The Hidden Facility](https://apoly.itch.io/the-hidden-facility)
+![Screenshot of a game The Hidden Facility, showing an enemy in front of a player and some actions player can execute](https://img.itch.zone/aW1hZ2UvNDAwODU2MS8yMzkwNDk3MC5wbmc=/original/iOgqM9.png)
+The Hidden Facility is an old school dungeon crawling game with made in 9 days using the limited set of assets.
+
+It utilizes `eecs` heavily and all levels are done via a serialization of saveable entities (entities with a tag `Saveable`), as well as save/load functionality.
+`eecs` allowed the game to be more data driven (some components are not represented in the code at all, used as dynamic tags to dynamically query entities) and utilized `edat` as for data storage and serialization.

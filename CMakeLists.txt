@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.13)
 project(eecs)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -14,6 +15,7 @@ add_executable(sample_query_multiple_component samples/query_multiple_components
 add_executable(sample_query_entities samples/query_entities.cpp)
 add_executable(sample_basic_system samples/basic_system.cpp)
 add_executable(sample_prefabs samples/prefabs.cpp)
+add_executable(sample_perf samples/perf.cpp)
 
 add_library(eecs INTERFACE)
 target_include_directories(eecs INTERFACE include)

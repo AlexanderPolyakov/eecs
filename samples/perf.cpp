@@ -17,34 +17,34 @@ int main(int argc, const char** argv)
     eecs::EntityId eid = create_entity(reg);
 
     // Make a prefab with one component
-    printf("Creating a base prefab...\n");
-    eecs::EntityWrap basePrefab = create_prefab_wrap(reg)
+    printf("Creating a particle prefab...\n");
+    eecs::EntityWrap particlePrefab = create_prefab_wrap(reg)
         .set(COMPID(vec2f, position), {0.f, 1.f})
-        .set(COMPID(float, hitpoints), 100.f)
-        .set(COMPID(float, productionTimer), 0.f);
+        .set(COMPID(float, wind), 100.f)
+        .set(COMPID(float, grav), 0.f);
 
-    eecs::EntityWrap namedBasePrefab = create_wrap_from_prefab(reg, basePrefab) // create from existing prefab
+    eecs::EntityWrap namedParticlePrefab = create_wrap_from_prefab(reg, particlePrefab) // create from existing prefab
         .toprefab() // Convert to prefab too
         .set(COMPID(std::string, name), {"Noname"});
 
-    create_wrap_from_prefab(reg, namedBasePrefab)
+    create_wrap_from_prefab(reg, namedParticlePrefab)
         .set(COMPID(vec2f, position), {0.f, 0.f})
-        .set(COMPID(std::string, name), {"Station A"});
+        .set(COMPID(std::string, name), {"Particle A"});
 
-    create_wrap_from_prefab(reg, namedBasePrefab)
+    create_wrap_from_prefab(reg, namedParticlePrefab)
         .set(COMPID(vec2f, position), {10.f, -3.f})
-        .set(COMPID(std::string, name), {"Station B"});
+        .set(COMPID(std::string, name), {"Particle B"});
 
-    printf("Querying bases...\n");
+    printf("Querying particles...\n");
     const auto start{std::chrono::high_resolution_clock::now()};
     for (size_t i = 0; i < numIterations; ++i)
     {
-        eecs::query_entities(reg, [&](eecs::EntityId, vec2f& position, const std::string& name, float hitpoints, float productionTimer)
+        eecs::query_entities(reg, [&](eecs::EntityId, vec2f& position, const std::string& name, float wind, float grav)
         {
             // upd position so no nop
-            position.x += hitpoints;
-            position.y += productionTimer;
-        }, COMPID(vec1f, position), COMPID(const std::string, name), COMPID(const float, hitpoints), COMPID(const float, productionTimer));
+            position.x += wind;
+            position.y += grav;
+        }, COMPID(vec2f, position), COMPID(const std::string, name), COMPID(const float, wind), COMPID(const float, grav));
     }
     const auto end{std::chrono::high_resolution_clock::now()};
 

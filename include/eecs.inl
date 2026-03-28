@@ -409,9 +409,13 @@ template<typename Callable, typename... ComponentTypes, std::size_t... Is>
 inline void event_impl(Registry& registry, EntityId entity, EntityId sourceEid, Callable func, const std::tuple<ComponentId<ComponentTypes>...>& args_tuple,
                          std::index_sequence<Is...>)
 {
-    // If no components were requested, there's nothing to do.
+    // If no components were requested, we're just calling the func
     if constexpr (sizeof...(ComponentTypes) == 0)
+    {
+        func(entity, sourceEid);
         return;
+    }
+
 
     std::tuple<SparseSet<std::remove_const_t<ComponentTypes>>*...> componentSets = { registry_get<ComponentTypes>(registry, std::get<Is>(args_tuple))... };
 

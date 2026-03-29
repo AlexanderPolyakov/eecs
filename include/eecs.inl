@@ -629,6 +629,13 @@ inline void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid, EntityI
         q->onEvent(reg, eid, sourceEid);
 }
 
+inline void emit_event_payload(Registry& reg, fnv1_hash_t evtName, EntityId eid, EntityId payloadEid)
+{
+    emit_event(reg, evtName, eid, payloadEid);
+    del_entity(reg, payloadEid);
+}
+
+
 inline void step(Registry& reg)
 {
     for (Registry::CachedQueryBase* q : reg.systems)

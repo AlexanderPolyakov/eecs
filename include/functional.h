@@ -58,6 +58,7 @@ template<typename Callable, typename... ComponentTypes>
 void on_event(Registry& reg, fnv1_hash_t evtName, Callable func, ComponentId<ComponentTypes>... args);
 
 void emit_event(Registry& reg, fnv1_hash_t evtName, EntityId eid, EntityId sourceEid);
+void emit_event_payload(Registry& reg, fnv1_hash_t evtName, EntityId eid, EntityId payload);
 
 void step(Registry& reg);
 

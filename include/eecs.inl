@@ -224,8 +224,13 @@ inline EntityId create_from_prefab(Registry& reg, EntityId prefabEid, const char
             continue;
         if (!holder.set || !holder.set->has(prefabEid))
             continue;
+
         holder.set->cloneEntity(prefabEid, eid);
+
     }
+    for (Registry::CachedQueryBase* q : reg.onEnter)
+        if (q->includesEntity(reg, eid))
+            q->executeOn(reg, eid);
     return eid;
 }
 
@@ -239,6 +244,7 @@ inline void copy_from_prefab(Registry& reg, EntityId prefabEid, EntityId eid)
             continue;
         holder.set->cloneEntity(prefabEid, eid);
     }
+    // TODO: add onOnter logic here too
 }
 
 inline void make_prefab(Registry& reg, EntityId eid)

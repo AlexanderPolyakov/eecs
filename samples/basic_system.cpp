@@ -20,19 +20,19 @@ int main(int argc, const char** argv)
     eecs::reg_system(reg, [&](eecs::EntityId eid, float& position, float velocity)
             {
                 position += velocity * dt;
-            }, COMPID(float, position), COMPID(float, velocity));
+            }, COMPS(position, velocity));
 
     eecs::reg_system(reg, [&](eecs::EntityId eid, float& velocity, float acceleration)
             {
                 velocity += acceleration * dt;
-            }, COMPID(float, velocity), COMPID(float, acceleration));
+            }, COMPS(velocity, acceleration));
 
     int frameNo = 0;
     eecs::reg_system(reg, [&](eecs::EntityId eid, float position)
             {
                 if (frameNo % 100 == 0)
                     printf("Ent(%d) pos (%.2f)\n", eid, position);
-            }, COMPID(float, position));
+            }, COMPS(position));
 
     for (size_t i = 0; i < 1000; ++i)
     {

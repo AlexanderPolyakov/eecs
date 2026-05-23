@@ -15,7 +15,7 @@ int main(int argc, const char** argv)
     eecs::query_components(reg, eid, [&](const float& position, float velocity)
     {
         printf("Position %.2f, Velocity %.2f\n", position, velocity);
-    }, COMPID(float, position), COMPID(float, velocity));
+    }, COMPS(position, velocity));
     return 0;
 }
 

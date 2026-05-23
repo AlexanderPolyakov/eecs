@@ -6,6 +6,10 @@
 #include <assert.h> // TODO: replace with in-house assert?
 #include <string>
 #include <limits>
+#include <tuple>
+#include <type_traits>
+#include <concepts>
+#include <utility>
 #include "entity.h"
 #include "sparse_set.h"
 #include "component.h"

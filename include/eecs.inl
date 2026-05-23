@@ -553,6 +553,146 @@ inline void query_entities(Registry& registry, Callable func, ComponentId<Compon
     query_entities_impl(registry, func, std::make_tuple(args...), std::index_sequence_for<ComponentTypes...>{});
 }
 
+// ---------------------------------------------------------------------------
+// HashedName-based overloads: type-deduced from the lambda's signature.
+//
+// The COMPS(a, b, ...) macro expands to a list of eecs::HashedName{"a"}, ...
+// values (hashes precomputed at compile time). Each function below recovers
+// the component types by introspecting the lambda's operator(), then forwards
+// to the existing typed overload by constructing ComponentId<T> from the
+// HashedName (reusing the precomputed hash).
+//
+// Each function declares a `kOffset` for where the component params begin in
+// the lambda parameter list:
+//   query_component/query_components: 0   (no leading EntityId)
+//   query_entities/reg_system/reg_enter/reg_exit: 1   (leading EntityId)
+//   on_event: 2   (leading EntityId, sourceEid)
+// ---------------------------------------------------------------------------
+namespace detail
+{
+
+template <typename F> struct lambda_args : lambda_args<decltype(&F::operator())> {};
+template <typename C, typename R, typename... A>
+struct lambda_args<R(C::*)(A...) const> { using type = std::tuple<A...>; };
+template <typename C, typename R, typename... A>
+struct lambda_args<R(C::*)(A...)>       { using type = std::tuple<A...>; };
+template <typename F> using lambda_args_t = typename lambda_args<std::decay_t<F>>::type;
+
+template <typename T>
+using comp_type_t = std::remove_const_t<std::remove_reference_t<T>>;
+
+template <typename H>
+concept IsHashedName = std::same_as<std::remove_cvref_t<H>, HashedName>;
+
+} // namespace detail
+
+template <typename Callable, typename... H>
+    requires (sizeof...(H) > 0) && (detail::IsHashedName<H> && ...)
+inline void query_entities(Registry& reg, Callable&& func, H... names)
+{
+    using args = detail::lambda_args_t<std::decay_t<Callable>>;
+    constexpr std::size_t kOffset = 1;
+    static_assert(std::tuple_size_v<args> == sizeof...(H) + kOffset,
+                  "query_entities lambda must be (EntityId, comp1, ...)");
+
+    const HashedName arr[sizeof...(H)] = { names... };
+    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        query_entities(reg, std::forward<Callable>(func),
+            ComponentId<detail::comp_type_t<std::tuple_element_t<Is + kOffset, args>>>(arr[Is])...);
+    }(std::make_index_sequence<sizeof...(H)>{});
+}
+
+template <typename Callable, typename H>
+    requires detail::IsHashedName<H>
+inline void query_component(Registry& reg, EntityId eid, Callable&& foo, H name)
+{
+    using args = detail::lambda_args_t<std::decay_t<Callable>>;
+    static_assert(std::tuple_size_v<args> == 1,
+                  "query_component lambda must be (comp)");
+    using T = detail::comp_type_t<std::tuple_element_t<0, args>>;
+    query_component(reg, eid, std::forward<Callable>(foo), ComponentId<T>(name));
+}
+
+template <typename Callable, typename... H>
+    requires (sizeof...(H) > 0) && (detail::IsHashedName<H> && ...)
+inline void query_components(Registry& reg, EntityId eid, Callable&& func, H... names)
+{
+    using args = detail::lambda_args_t<std::decay_t<Callable>>;
+    constexpr std::size_t kOffset = 0;
+    static_assert(std::tuple_size_v<args> == sizeof...(H) + kOffset,
+                  "query_components lambda must be (comp1, comp2, ...)");
+
+    const HashedName arr[sizeof...(H)] = { names... };
+    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        query_components(reg, eid, std::forward<Callable>(func),
+            ComponentId<detail::comp_type_t<std::tuple_element_t<Is + kOffset, args>>>(arr[Is])...);
+    }(std::make_index_sequence<sizeof...(H)>{});
+}
+
+template <typename Callable, typename... H>
+    requires (sizeof...(H) > 0) && (detail::IsHashedName<H> && ...)
+inline void reg_system(Registry& reg, Callable&& func, H... names)
+{
+    using args = detail::lambda_args_t<std::decay_t<Callable>>;
+    constexpr std::size_t kOffset = 1;
+    static_assert(std::tuple_size_v<args> == sizeof...(H) + kOffset,
+                  "reg_system lambda must be (EntityId, comp1, ...)");
+
+    const HashedName arr[sizeof...(H)] = { names... };
+    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        reg_system(reg, std::forward<Callable>(func),
+            ComponentId<detail::comp_type_t<std::tuple_element_t<Is + kOffset, args>>>(arr[Is])...);
+    }(std::make_index_sequence<sizeof...(H)>{});
+}
+
+template <typename Callable, typename... H>
+    requires (sizeof...(H) > 0) && (detail::IsHashedName<H> && ...)
+inline void reg_enter(Registry& reg, Callable&& func, H... names)
+{
+    using args = detail::lambda_args_t<std::decay_t<Callable>>;
+    constexpr std::size_t kOffset = 1;
+    static_assert(std::tuple_size_v<args> == sizeof...(H) + kOffset,
+                  "reg_enter lambda must be (EntityId, comp1, ...)");
+
+    const HashedName arr[sizeof...(H)] = { names... };
+    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        reg_enter(reg, std::forward<Callable>(func),
+            ComponentId<detail::comp_type_t<std::tuple_element_t<Is + kOffset, args>>>(arr[Is])...);
+    }(std::make_index_sequence<sizeof...(H)>{});
+}
+
+template <typename Callable, typename... H>
+    requires (sizeof...(H) > 0) && (detail::IsHashedName<H> && ...)
+inline void reg_exit(Registry& reg, Callable&& func, H... names)
+{
+    using args = detail::lambda_args_t<std::decay_t<Callable>>;
+    constexpr std::size_t kOffset = 1;
+    static_assert(std::tuple_size_v<args> == sizeof...(H) + kOffset,
+                  "reg_exit lambda must be (EntityId, comp1, ...)");
+
+    const HashedName arr[sizeof...(H)] = { names... };
+    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        reg_exit(reg, std::forward<Callable>(func),
+            ComponentId<detail::comp_type_t<std::tuple_element_t<Is + kOffset, args>>>(arr[Is])...);
+    }(std::make_index_sequence<sizeof...(H)>{});
+}
+
+template <typename Callable, typename... H>
+    requires (sizeof...(H) > 0) && (detail::IsHashedName<H> && ...)
+inline void on_event(Registry& reg, fnv1_hash_t evtName, Callable&& func, H... names)
+{
+    using args = detail::lambda_args_t<std::decay_t<Callable>>;
+    constexpr std::size_t kOffset = 2;
+    static_assert(std::tuple_size_v<args> == sizeof...(H) + kOffset,
+                  "on_event lambda must be (EntityId, EntityId sourceEid, comp1, ...)");
+
+    const HashedName arr[sizeof...(H)] = { names... };
+    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        on_event(reg, evtName, std::forward<Callable>(func),
+            ComponentId<detail::comp_type_t<std::tuple_element_t<Is + kOffset, args>>>(arr[Is])...);
+    }(std::make_index_sequence<sizeof...(H)>{});
+}
+
 template<typename Callable, typename... ComponentTypes>
 void Registry::CachedQuery<Callable, ComponentTypes...>::execute(Registry& reg) const
 {

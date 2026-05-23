@@ -14,7 +14,7 @@ int main(int argc, const char** argv)
     eecs::query_component(reg, eid, [&](const float& position)
     {
         printf("Component value is %.2f\n", position);
-    }, COMPID(float, position));
+    }, COMPS(position));
     return 0;
 }
 

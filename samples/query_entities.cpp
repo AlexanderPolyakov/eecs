@@ -18,6 +18,6 @@ int main(int argc, const char** argv)
     [&](eecs::EntityId eid, float position, float velocity)
     {
         printf("Entity(%d): pos (%.2f), vel (%.2f)\n", eid, position, velocity);
-    }, COMPID(float, position), COMPID(float, velocity));
+    }, COMPS(position, velocity));
     return 0;
 }

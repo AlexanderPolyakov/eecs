@@ -24,7 +24,7 @@ int main(int argc, const char** argv)
     eecs::query_entities(reg, [&](eecs::EntityId, const vec2f& position)
     {
         printf("We expect it not to trigger, as prefabs are filtered from queries and systems!\n");
-    }, COMPID(const vec2f, position));
+    }, COMPS(position));
 
     eecs::EntityWrap namedBasePrefab = create_wrap_from_prefab(reg, basePrefab) // create from existing prefab
         .toprefab() // Convert to prefab too
@@ -45,7 +45,7 @@ int main(int argc, const char** argv)
     {
         printf("Found a base '%s' at (%.2f, %.2f) at %.2fhp and with %.2f production timer!\n",
                 name.c_str(), position.x, position.y, hitpoints, productionTimer);
-    }, COMPID(const vec2f, position), COMPID(const std::string, name), COMPID(const float, hitpoints), COMPID(const float, productionTimer));
+    }, COMPS(position, name, hitpoints, productionTimer));
 
     return 0;
 }

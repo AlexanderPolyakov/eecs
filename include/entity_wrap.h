@@ -53,6 +53,18 @@ struct EntityWrap
     {
         query_components(reg, eid, c, cid...);
     }
+
+    template<typename Callable>
+    void query_comp(Callable&& c, HashedName name)
+    {
+        query_component(reg, eid, std::forward<Callable>(c), name);
+    }
+    template<typename Callable, typename... H>
+        requires (sizeof...(H) > 0) && (std::same_as<std::remove_cvref_t<H>, HashedName> && ...)
+    void query_comps(Callable&& c, H... names)
+    {
+        query_components(reg, eid, std::forward<Callable>(c), names...);
+    }
 };
 
 inline EntityWrap wrap_entity(Registry& reg, EntityId eid) { return EntityWrap(reg, eid); }

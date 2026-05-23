@@ -44,7 +44,7 @@ int main(int argc, const char** argv)
             // upd position so no nop
             position.x += wind;
             position.y += grav;
-        }, COMPID(vec2f, position), COMPID(const std::string, name), COMPID(const float, wind), COMPID(const float, grav));
+        }, COMPS(position, name, wind, grav));
     }
     const auto end{std::chrono::high_resolution_clock::now()};
 
